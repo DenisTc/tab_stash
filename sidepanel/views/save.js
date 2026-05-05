@@ -35,10 +35,18 @@ export async function renderSave(root) {
 
   function renderRows() {
     list.innerHTML = '';
+    if (browserTabs.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'No tabs to save. Open the panel from a window with tabs.';
+      list.appendChild(empty);
+      return;
+    }
     for (const tab of browserTabs) {
       const row = document.createElement('label');
       row.className = 'tab-row';
       row.style.cursor = 'pointer';
+      row.style.paddingRight = '28px';
 
       const cb = document.createElement('input');
       cb.type = 'checkbox';
@@ -66,7 +74,23 @@ export async function renderSave(root) {
       u.textContent = tab.url;
       info.append(t, u);
 
-      row.append(cb, fav, info);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.title = 'Remove from list';
+      del.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = browserTabs.indexOf(tab);
+        if (idx !== -1) browserTabs.splice(idx, 1);
+        checked.delete(tab.id);
+        updateCount();
+        updateSaveButton();
+        renderRows();
+      });
+
+      row.append(cb, fav, info, del);
       list.appendChild(row);
     }
   }
