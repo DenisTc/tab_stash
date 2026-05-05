@@ -29,6 +29,7 @@ function makeChromeMock() {
         }),
         clear: vi.fn(async () => storageBacking.clear()),
       },
+      onChanged: { addListener: vi.fn() },
     },
     tabs: {
       query: vi.fn(),

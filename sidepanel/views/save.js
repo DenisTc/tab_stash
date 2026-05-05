@@ -1,5 +1,5 @@
 import { getCurrentWindowTabs, getHighlightedTabs, closeTabs } from '../lib/tabs.js';
-import { loadStorage, addTabsToFolder, createFolder, getFolder } from '../lib/storage.js';
+import { loadStorage, addTabsToFolder, createFolder } from '../lib/storage.js';
 import { showToast } from '../lib/toast.js';
 
 export async function renderSave(root) {
@@ -129,25 +129,26 @@ export async function renderSave(root) {
     const folderName = nameInput.value.trim();
     if (!folderName || checked.size === 0) return;
 
-    let folder = data.folders.find((f) => f.name === folderName);
-    if (!folder) {
-      try { folder = await createFolder(folderName); }
-      catch (e) { showToast(e.message); return; }
+    try {
+      let folder = data.folders.find((f) => f.name === folderName);
+      if (!folder) folder = await createFolder(folderName);
+      const selectedTabs = browserTabs.filter((t) => checked.has(t.id));
+      const result = await addTabsToFolder(folder.id, selectedTabs.map((t) => ({
+        title: t.title,
+        url: t.url,
+        favIconUrl: t.favIconUrl,
+      })));
+      if (closeCb.checked) {
+        await closeTabs(selectedTabs.map((t) => t.id));
+      }
+      const msg = result.skipped
+        ? `Saved ${result.added} tab${result.added === 1 ? '' : 's'} to '${folderName}' (${result.skipped} already there)`
+        : `Saved ${result.added} tab${result.added === 1 ? '' : 's'} to '${folderName}'`;
+      showToast(msg);
+      location.hash = '#/library';
+    } catch (e) {
+      showToast(e.message);
     }
-    const selectedTabs = browserTabs.filter((t) => checked.has(t.id));
-    const result = await addTabsToFolder(folder.id, selectedTabs.map((t) => ({
-      title: t.title,
-      url: t.url,
-      favIconUrl: t.favIconUrl,
-    })));
-    if (closeCb.checked) {
-      await closeTabs(selectedTabs.map((t) => t.id));
-    }
-    const msg = result.skipped
-      ? `Saved ${result.added} tab${result.added === 1 ? '' : 's'} to '${folderName}' (${result.skipped} already there)`
-      : `Saved ${result.added} tab${result.added === 1 ? '' : 's'} to '${folderName}'`;
-    showToast(msg);
-    location.hash = '#/library';
   });
 
   renderRows();

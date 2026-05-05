@@ -186,9 +186,13 @@ export async function renderFolder(root, folderId) {
   async function promptDelete() {
     const ok = await confirmModal('Delete folder?', `Delete '${folder.name}' and ${folder.tabs.length} tabs?`);
     if (!ok) return;
-    await deleteFolder(folder.id);
-    showToast(`Deleted '${folder.name}'`);
-    location.hash = '#/library';
+    try {
+      await deleteFolder(folder.id);
+      showToast(`Deleted '${folder.name}'`);
+      location.hash = '#/library';
+    } catch (e) {
+      showToast(e.message);
+    }
   }
 
   menuBtn.addEventListener('click', showMenu);
@@ -210,9 +214,13 @@ export async function renderFolder(root, folderId) {
     const where = await showOpenAllModal(folder.tabs);
     if (!where) return;
     const urls = folder.tabs.map((t) => t.url);
-    if (where === 'current') await openTabsInCurrentWindow(urls);
-    else await openTabsInNewWindow(urls);
-    showToast(`Opened ${urls.length} tabs`);
+    try {
+      if (where === 'current') await openTabsInCurrentWindow(urls);
+      else await openTabsInNewWindow(urls);
+      showToast(`Opened ${urls.length} tabs`);
+    } catch (e) {
+      showToast(`Could not open all tabs: ${e.message}`);
+    }
   });
 
   copy.addEventListener('click', async () => {
@@ -285,18 +293,28 @@ export async function renderFolder(root, folderId) {
 
     row.addEventListener('click', (e) => {
       if (e.target === del) return;
-      openTab(tab.url);
+      openTab(tab.url).catch(() => {
+        showToast(`Cannot open ${tab.url} from extension`);
+      });
     });
 
     del.addEventListener('click', async (e) => {
       e.stopPropagation();
       // Optimistic remove + undo: snapshot then restore on undo.
       const removedTab = { ...tab };
-      await storageRemoveTab(folder.id, tab.id);
+      try {
+        await storageRemoveTab(folder.id, tab.id);
+      } catch (err) {
+        showToast(err.message);
+        return;
+      }
       const undone = await showUndoToast(`Removed '${removedTab.title || removedTab.url}'`);
       if (undone) {
-        // Re-add (will dedupe-no-op if user already added it again somehow).
-        await addTabsToFolder(folder.id, [{ title: removedTab.title, url: removedTab.url, favIconUrl: removedTab.favIconUrl }]);
+        try {
+          await addTabsToFolder(folder.id, [{ title: removedTab.title, url: removedTab.url, favIconUrl: removedTab.favIconUrl }]);
+        } catch (err) {
+          showToast(`Could not restore tab: ${err.message}`);
+        }
       }
     });
   }
