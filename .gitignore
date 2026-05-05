@@ -8,11 +8,13 @@
 .DS_Store
 Thumbs.db
 
-# Node
+# Node / Vitest
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+coverage/
+.vitest/
 
 # Editor
 .vscode/
