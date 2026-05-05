@@ -1,0 +1,20 @@
+# Brainstorming session artifacts (visual companion)
+.superpowers/
+
+# Local Claude/IDE settings
+.claude/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
