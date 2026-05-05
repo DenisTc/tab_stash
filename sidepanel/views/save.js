@@ -27,7 +27,25 @@ export async function renderSave(root) {
   noneLink.style.color = 'var(--accent)';
   noneLink.style.textDecoration = 'none';
   noneLink.style.marginLeft = '6px';
-  titleRow.append(titleText, allLink, document.createTextNode(' · '), noneLink);
+  const removeLink = document.createElement('a');
+  removeLink.href = '#';
+  removeLink.textContent = 'Remove';
+  removeLink.style.color = 'var(--danger)';
+  removeLink.style.textDecoration = 'none';
+  removeLink.style.marginLeft = '6px';
+  const updateRemoveLink = () => {
+    const enabled = checked.size > 0;
+    removeLink.style.opacity = enabled ? '1' : '0.4';
+    removeLink.style.pointerEvents = enabled ? 'auto' : 'none';
+  };
+  titleRow.append(
+    titleText,
+    allLink,
+    document.createTextNode(' · '),
+    noneLink,
+    document.createTextNode(' · '),
+    removeLink,
+  );
   root.appendChild(titleRow);
 
   const list = document.createElement('div');
@@ -57,6 +75,7 @@ export async function renderSave(root) {
         else checked.delete(tab.id);
         updateCount();
         updateSaveButton();
+        updateRemoveLink();
       });
 
       const fav = document.createElement('img');
@@ -87,6 +106,7 @@ export async function renderSave(root) {
         checked.delete(tab.id);
         updateCount();
         updateSaveButton();
+        updateRemoveLink();
         renderRows();
       });
 
@@ -100,6 +120,7 @@ export async function renderSave(root) {
     for (const tab of browserTabs) checked.add(tab.id);
     updateCount();
     updateSaveButton();
+    updateRemoveLink();
     renderRows();
   });
   noneLink.addEventListener('click', (e) => {
@@ -107,6 +128,19 @@ export async function renderSave(root) {
     checked.clear();
     updateCount();
     updateSaveButton();
+    updateRemoveLink();
+    renderRows();
+  });
+  removeLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (checked.size === 0) return;
+    for (let i = browserTabs.length - 1; i >= 0; i--) {
+      if (checked.has(browserTabs[i].id)) browserTabs.splice(i, 1);
+    }
+    checked.clear();
+    updateCount();
+    updateSaveButton();
+    updateRemoveLink();
     renderRows();
   });
 
@@ -177,4 +211,5 @@ export async function renderSave(root) {
 
   renderRows();
   updateSaveButton();
+  updateRemoveLink();
 }
