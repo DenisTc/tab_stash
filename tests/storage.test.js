@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { loadStorage, saveStorage, CURRENT_SCHEMA_VERSION } from '../sidepanel/lib/storage.js';
 import { createFolder, renameFolder, deleteFolder, getFolder } from '../sidepanel/lib/storage.js';
+import { addTabsToFolder, removeTab } from '../sidepanel/lib/storage.js';
 
 describe('storage load/save', () => {
   it('returns an empty default when storage is uninitialised', async () => {
@@ -68,5 +69,61 @@ describe('folder CRUD', () => {
     const f = await createFolder('X');
     expect((await getFolder(f.id))?.name).toBe('X');
     expect(await getFolder('nonexistent')).toBeNull();
+  });
+});
+
+describe('tab operations', () => {
+  it('addTabsToFolder appends tabs with generated id and savedAt', async () => {
+    const f = await createFolder('Work');
+    const result = await addTabsToFolder(f.id, [
+      { title: 'A', url: 'https://a.com/' },
+      { title: 'B', url: 'https://b.com/' },
+    ]);
+    expect(result.added).toBe(2);
+    expect(result.skipped).toBe(0);
+    const after = await getFolder(f.id);
+    expect(after.tabs).toHaveLength(2);
+    expect(after.tabs[0].id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(after.tabs[0].savedAt).toBeGreaterThan(0);
+  });
+
+  it('addTabsToFolder dedupes by URL within the folder', async () => {
+    const f = await createFolder('Work');
+    await addTabsToFolder(f.id, [{ title: 'A', url: 'https://a.com/' }]);
+    const result = await addTabsToFolder(f.id, [
+      { title: 'A duplicate', url: 'https://a.com/' },
+      { title: 'B', url: 'https://b.com/' },
+    ]);
+    expect(result.added).toBe(1);
+    expect(result.skipped).toBe(1);
+    const after = await getFolder(f.id);
+    expect(after.tabs).toHaveLength(2);
+  });
+
+  it('addTabsToFolder updates folder updatedAt', async () => {
+    const f = await createFolder('Work');
+    const original = f.updatedAt;
+    await new Promise((r) => setTimeout(r, 5));
+    await addTabsToFolder(f.id, [{ title: 'A', url: 'https://a.com/' }]);
+    const after = await getFolder(f.id);
+    expect(after.updatedAt).toBeGreaterThan(original);
+  });
+
+  it('addTabsToFolder throws for unknown folder', async () => {
+    await expect(addTabsToFolder('nope', [{ title: 'A', url: 'https://a.com/' }])).rejects.toThrow(/not found/i);
+  });
+
+  it('removeTab removes by tab id', async () => {
+    const f = await createFolder('Work');
+    await addTabsToFolder(f.id, [
+      { title: 'A', url: 'https://a.com/' },
+      { title: 'B', url: 'https://b.com/' },
+    ]);
+    const folderBefore = await getFolder(f.id);
+    const targetId = folderBefore.tabs[0].id;
+    await removeTab(f.id, targetId);
+    const folderAfter = await getFolder(f.id);
+    expect(folderAfter.tabs).toHaveLength(1);
+    expect(folderAfter.tabs.find((t) => t.id === targetId)).toBeUndefined();
   });
 });

@@ -78,3 +78,46 @@ export async function getFolder(id) {
   const data = await loadStorage();
   return findFolder(data.folders, id);
 }
+
+export async function addTabsToFolder(folderId, tabsInput) {
+  const data = await loadStorage();
+  const folder = findFolder(data.folders, folderId);
+  if (!folder) throw new Error('Folder not found');
+
+  const existingUrls = new Set(folder.tabs.map((t) => t.url));
+  const now = Date.now();
+  let added = 0;
+  let skipped = 0;
+  const newTabs = [];
+  for (const t of tabsInput) {
+    if (existingUrls.has(t.url)) {
+      skipped++;
+      continue;
+    }
+    existingUrls.add(t.url);
+    newTabs.push({
+      id: uuid(),
+      title: t.title ?? '',
+      url: t.url,
+      favIconUrl: t.favIconUrl,
+      savedAt: now,
+    });
+    added++;
+  }
+  // Newest first.
+  folder.tabs = [...newTabs, ...folder.tabs];
+  folder.updatedAt = now;
+  await saveStorage(data);
+  return { added, skipped };
+}
+
+export async function removeTab(folderId, tabId) {
+  const data = await loadStorage();
+  const folder = findFolder(data.folders, folderId);
+  if (!folder) throw new Error('Folder not found');
+  const idx = folder.tabs.findIndex((t) => t.id === tabId);
+  if (idx === -1) throw new Error('Tab not found');
+  folder.tabs.splice(idx, 1);
+  folder.updatedAt = Date.now();
+  await saveStorage(data);
+}
