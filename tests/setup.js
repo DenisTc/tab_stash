@@ -50,5 +50,5 @@ globalThis.__storageBacking = storageBacking;
 
 beforeEach(() => {
   storageBacking.clear();
-  vi.resetAllMocks();
+  vi.clearAllMocks();
 });
